@@ -1,0 +1,251 @@
+Jenkins CI/CD pipeline with GitHub webhook integration for Deploying Docker application on EC2 instances with help of declarative pipeline.
+
+steps:
+  
+Go to the AWS portal, and create a new instance
+
+on jenkins server
+Make on directory 
+mkdir jenkins 
+
+install java 
+
+sudo apt update
+java -version
+sudo apt install openjdk-17-jre-headless
+
+ex:openjdk version "17.0.12" 2024-07-16
+
+refer this link:
+https://www.jenkins.io/doc/book/installing/linux/
+
+vi jenkins_install.sh
+
+#!bin/bash
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install jenkins -y
+
+:x
+
+save the script
+
+run the script using below command
+
+sh jenkins_install.sh
+
+jenkins --version
+
+Ex: 2.462.3
+
+Install Docker as well to the machine by running.
+To install Docker on Ubuntu, you can use the following command:
+
+sudo apt-get install docker.io -y
+
+Starting the Docker service
+
+sudo systemctl start docker
+
+Verifying the installation
+
+sudo docker run hello-world
+
+Enabling the Docker service
+To start the Docker service automatically when the instance starts, you can use the following command:
+
+sudo systemctl enable docker
+
+Check the Docker version
+
+docker --version
+
+(Optional)Add User to Docker Group 
+ Add your user to the Docker group to run Docker commands without 'sudo'
+ 
+ sudo usermod -a -G docker $(whoami)
+ 
+ Note that the change to the user’s group membership will not take effect until the next time the user logs in. You can log out and log back in to apply the changes or use the following command to activate the changes without logging out:
+ 
+ newgrp docker
+ 
+ we will allow ports 8080 and 8001 for this machine from a security group. We can find the security group in the VM description. Now, here we need to allow “Inbound Rule” as below:
+ 
+ Now, Copy the Public Ip of the machine and paste it to the browser to access the Jenkins portal. As,
+ 
+ http://3.110.37.97:8080/
+ 
+ Note if any problm then check below command
+ vi /usr/lib/systemd/system/jenkins.service
+ sudo cat /var/log/jenkins/jenkins.log
+ sudo journalctl -u jenkins.service
+ sudo service jenkins status
+ sudo service jenkins start
+ sudo service jenkins stop
+ sudo service jenkins restart
+ 
+ The folks who are using windows
+ To stop:
+jenkins.exe stop
+
+To start:
+jenkins.exe start
+
+To restart:
+jenkins.exe restart
+
+This will show you a list of all of the units that systemd currently has active on the system. The output will look something like this:
+
+systemctl list-units
+
+
+Unlock Jenkins
+
+sudo cat /home/ubuntu/.jenkins/secrets/initialAdminPassword
+
+paste password 
+
+and open jenkins page install suggested plugins
+
+
+Now, we will create a CI/CD pipeline, which will fetch the code from GitHub.
+
+
+Open Git Bash
+
+Paste the text below, replacing the email used in the example with your GitHub email address.
+
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+Note: If you are using a legacy system that doesn't support the Ed25519 algorithm, use:
+
+ ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+ 
+ Adding your SSH key to the ssh-agent
+ 
+ cat ~/.ssh/id_ed25519.pub
+ 
+ In the upper-right corner of any page on GitHub, click your profile photo, then click  Settings.
+
+In the "Access" section of the sidebar, click  SSH and GPG keys.
+
+Click New SSH key or Add SSH key.
+
+In the "Title" field, add a descriptive label for the new key. For example, if you're using a personal laptop, you might call this key "Personal laptop".
+
+Select the type of key, either authentication or signing. For more information about commit signing, see "About commit signature verification."
+
+In the "Key" field, paste your public key.
+
+Click Add SSH key.
+
+If prompted, confirm access to your account on GitHub. For more information, see "Sudo mode."
+ 
+Testing your SSH connection
+ 
+Open Git Bash.
+
+Enter the following:
+
+ssh -T git@github.com
+# Attempts to ssh to GitHub
+
+Jenkins Credentials Provider: Jenkins
+
+Repository UR
+https://github.com/sanchit1807/react_django_demo_app.git
+
+Add Credentials
+
+Domain
+Globle credentials
+kind
+SSH Username with private key  
+scope
+Global(jenkins,nodes,item,all child item,etc)
+id 
+any you can type
+
+username 
+
+any 
+
+private key 
+enter 
+#go to git bash and go to ~/.ssh folder 
+cat id_ed25519
+ 
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACBLmrjwsma3CUaOu1KpUbPCuJO1PHUe+F/8J4pcnsTRBQAAAJiS/IwakvyM
+GgAAAAtzc2gtZWQyNTUxOQAAACBLmrjwsma3CUaOu1KpUbPCuJO1PHUe+F/8J4pcnsTRBQ
+AAAEBsH7Zoop+7SFp1FBQSFWmyOtrXXxegHK2nopX+4pbVWEuauPCyZrcJRo67UqlRs8K4
+k7U8dR74X/wnilyexNEFAAAAFXNhbmNoaXR0YWtlQGdtYWlsLmNvbQ==
+-----END OPENSSH PRIVATE KEY-----
+
+paste parivate key on Jenkins Credentials Provider: Jenkins
+
+21. In Build Step, select Execute Shell and write the following command to build Docker image and from Docker image, we will create a container.
+
+22. Now, Click on Build Now. And the build will be started, in the build history.
+
+23. In Output Console,
+
+24. After getting success, In the browser, search for
+
+<public_ip_of_ec2:8001>
+
+Now, our goal is,
+
+· Whenever the developer commits their code in GitHub, after every commit, it should reflect in the live web app.
+
+· For that, we will use “GitScm polling”.
+
+· Every time, a developer made a commit, a trigger will run automatically, which will rebuild the image and run a container on your behalf as a part of automation that will run the pipeline automatically.
+
+25. Now, configure the project again, and add
+
+Build Trigger: GitHub hook trigger for GitScm polling.
+
+Description: GitHub webhook integration
+
+26. We need to install the “Git Integration” plugin from Manage Jenkins, by following the path,
+
+(Manage Jenkins > Manage Plugins > Git Integration).
+
+Note: if you are not genrate key then go to this stape 
+27. Now, Goto GitHub > Settings > SSH and GPG Keys > New SSH Key.
+
+Add details as
+
+Title: sanchittake@gmail.com
+
+Key type: <public_key>
+
+28. To get the Public key, open the “id_rsa.pub” file and copy the content. (Public Key)
+
+29. Now, we need to go to GitHub and create a new SSH and GPG Key.
+
+GitHub > Repo “react-django-demo-app” > Settings > Webhooks.
+
+30. Add the following details,
+
+Payload URL: http://<public_ip_of_ec2>:8080/github-webhook/
+
+Content-Type: application/json
+
+Which event would you like to trigger this webhook?
+
+o Just the push event.
+
+Active: True
+
+Click on “Add Webhook”.
+
+31. Now, Save the configured project.
+
+32. Do some changes in the code and push to GitHub, this will automatically run a pipeline, and the new code will be Live.
